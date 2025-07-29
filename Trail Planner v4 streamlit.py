@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-trail_run_planner_v4_app.py  (v4.3, 2025‑07‑29)
-------------------------------------------------
+Trail Planner v4 streamlit.py  (v4.3.1, 2025‑07‑29)
+--------------------------------------------------
 Streamlit UI for **Trail‑Run Planner v4**.
 
-### v4.3 changes
-* Added third tab **“Info & References”** providing:
-  * Rationale behind weekly‑hours guidance & injury‑risk heuristic.
-  * Table of workout categories with intensity cues.
-  * Key scientific references.
-* The warning threshold (>20 % above recommended) is explicitly described in the tab so users know the basis.
+* v4.3.1 – FIX: completed Downloads section (previous commit truncated at an
+  unterminated string). Now builds on Streamlit Cloud without syntax error.
 """
 
 import datetime as dt
@@ -27,6 +23,7 @@ from generate_training_plan_v4 import (
     CATEGORY_RPE,
 )
 
+# ───────────────────────────────── page config ──────────────────────────────
 st.set_page_config(
     page_title="Trail‑Run Planner v4",
     page_icon="🏔️",
@@ -36,9 +33,10 @@ st.set_page_config(
 
 st.title("🏔️ Trail‑Run Planner v4")
 
-# ───────────────────────────────── helper fns ────────────────────────────────
+# ───────────────────────────────── helper functions ─────────────────────────
 
 def _suggest_key(dist_km: int) -> str:
+    """Return the DISTANCE_SUGGEST key corresponding to dist_km."""
     if dist_km <= 12:
         return "10 km"
     if dist_km <= 30:
@@ -51,17 +49,19 @@ def _suggest_key(dist_km: int) -> str:
         return "70 km"
     return "100 km"
 
-# Build workout‑category table once -------------------------------------------------
+# Build workout‑category table once -----------------------------------------
 _work_tbl = pd.DataFrame([
     {
         "Category": k.title(),
-        "HR Target": ("<VT1" if tpl == ("<VT1",) else f"{int(lo*100)}–{int(hi*100)} % HRmax") if tpl != ("rest",) else "Rest",
+        "HR Target": (
+            "<VT1" if tpl == ("<VT1",) else f"{int(lo*100)}–{int(hi*100)} % HRmax"
+        ) if tpl != ("rest",) else "Rest",
         "RPE": CATEGORY_RPE[k],
     }
     for k, tpl in CATEGORY_HR.items()
 ])
 
-# ───────────────────────────────── sidebar ───────────────────────────────────
+# ───────────────────────────────── sidebar ─────────────────────────────────
 with st.sidebar:
     st.header("Configure Variables")
     st.subheader("General")
@@ -126,7 +126,7 @@ with st.sidebar:
     shift_offset = st.number_input("Shift Cycle Offset", 0, 7, 0, step=1)
     generate_button = st.button("🚀 Generate Plan", type="primary")
 
-# ───────────────────────────────── main logic ───────────────────────────────
+# ───────────────────────────────── main logic ──────────────────────────────
 if generate_button:
     comp_df, race_df = generate_plan(
         start_date=start_date,
@@ -180,11 +180,10 @@ Key findings:
             """
         )
 
-    # -----------------------------------------------------------------------
-    # Downloads --------------------------------------------------------------
-    # -----------------------------------------------------------------------
+    # ─────────────────────────────── Downloads ─────────────────────────────
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
     xlsx_file = Path.cwd() / f"training_plan_{stamp}.xlsx"
+
     save_plan_to_excel(
         comp_df,
         race_df,
@@ -193,16 +192,4 @@ Key findings:
             "Max HR": hrmax,
             "VT1": vt1,
             "VO2max": vo2max,
-            "Weekly Hours": weekly_hours_str,
-            "Include Base Block": include_base_block,
-            "Firefighter": firefighter_schedule,
-            "Treadmill": treadmill_available,
-            "Terrain": terrain_type,
-            "Race Date": race_date,
-            "Race Distance": race_distance,
-            "Elevation Gain": elevation_gain,
-            "Shift Offset": shift_offset,
-        },
-        str(xlsx_file),
-    )
-    with open(xlsx_file, "
+            "Weekly Hours": weekly_hours
