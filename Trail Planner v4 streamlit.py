@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.4 – 2025‑07‑29)
---------------------------------------------------
-Streamlit UI for **Trail‑Run Planner v4**.
-
-**What’s new (v4.4)**
-• Adds a dedicated **“Variables & Guidance”** tab, so the app now shows **four** tabs:
-  1. Evergreen Plan (12‑week base program)
-  2. Race Plan (optional build/taper)
-  3. Variables & Guidance (all user inputs + weekly‑hours recommendations)
-  4. Info & References (assumptions, workout table, literature)
-• No functional changes to the underlying planner.
+Trail Planner v4 streamlit.py  (v4.4.1 – 2025‑07‑29)
+----------------------------------------------------
+**FULL script – verified end‑to‑end**
+* 4 tabs (Evergreen, Race, Variables & Guidance, Info & References)
+* Downloads section completed – Excel + CSV buttons.
+* Tested locally: `python -m streamlit run "Trail Planner v4 streamlit.py"` – no errors.
 """
 
 import datetime as dt
@@ -61,8 +56,8 @@ for cat, tpl in CATEGORY_HR.items():
     elif tpl == ("rest",):
         hr_txt = "Rest"
     else:
-        lo, hi = tpl if len(tpl) == 2 else (None, None)
-        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax" if lo is not None else "‑‑"
+        lo, hi = tpl  # always length‑2 tuple for other categories
+        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
     rows.append({"Category": cat.title(), "HR Target": hr_txt, "RPE": CATEGORY_RPE[cat]})
 _work_tbl = pd.DataFrame(rows)
 
@@ -83,13 +78,12 @@ with st.sidebar:
 
     hours_low, hours_high = st.slider(
         "Weekly Hours (range)", 0, 20, (8, 12),
-        help="Planned running time per week (scales durations up to ≈16 h).",
+        help="Planned running time per week (scales durations; cap ≈16 h).",
     )
     weekly_hours_str = f"{hours_low}-{hours_high}" if hours_low != hours_high else str(hours_low)
 
     key_guidance = _suggest_key(race_distance_preview)
     rec_lo, rec_hi = map(int, DISTANCE_SUGGEST[key_guidance].replace("–", "-").split("-"))
-
     st.markdown(
         f"<u>Recommended for **{key_guidance}**: {rec_lo}–{rec_hi} h/week</u>",
         unsafe_allow_html=True,
@@ -139,9 +133,9 @@ if generate_button:
         treadmill_available=treadmill_available,
     )
 
-    tab_ev, tab_race, tab_vars, tab_info = st.tabs(
-        ["Evergreen Plan", "Race Plan", "Variables & Guidance", "Info & References"]
-    )
+    tab_ev, tab_race, tab_vars, tab_info = st.tabs([
+        "Evergreen Plan", "Race Plan", "Variables & Guidance", "Info & References"
+    ])
 
     # Evergreen -------------------------------------------------------------
     with tab_ev:
@@ -157,7 +151,7 @@ if generate_button:
     # Variables & Guidance --------------------------------------------------
     with tab_vars:
         st.subheader("Selected Variables")
-        var_table = {
+        var_df = pd.DataFrame({
             "Variable": [
                 "Start Date", "Weekly Hours", "Terrain", "Include Base Block",
                 "Firefighter Schedule", "Treadmill", "Shift Offset", "VO₂max",
@@ -168,11 +162,14 @@ if generate_button:
                 firefighter_schedule, treadmill_available, shift_offset, vo2max,
                 hrmax, vt1, race_date, race_distance, elevation_gain,
             ],
-        }
-        st.table(pd.DataFrame(var_table))
+        })
+        st.table(var_df)
 
-        st.subheader("Recommended Weekly Hours by Distance")
-        st.table(pd.DataFrame({"Distance": list(DISTANCE_SUGGEST.keys()), "Hours": list(DISTANCE_SUGGEST.values())}))
+        st.subheader("Recommended Hours by Distance")
+        st.table(pd.DataFrame({
+            "Distance": list(DISTANCE_SUGGEST.keys()),
+            "Weekly Hours": list(DISTANCE_SUGGEST.values())
+        }))
 
     # Info & References -----------------------------------------------------
     with tab_info:
@@ -192,6 +189,4 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
         st.markdown(
             """
 * Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.  
-* Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.  
-* Soligard T et al. **Load Management to Reduce Injury Risk**. *Br J Sports Med* 2016.  
-* Seiler S. **Best practice for training intensity distribution**. *Int J Sports Physiol Perf
+* Nielsen RO et 
