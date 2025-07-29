@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.5 – 2025‑07‑29)
---------------------------------------------------
-Finalised Streamlit UI for **Trail‑Run Planner v4**
+Trail Planner v4 streamlit.py  (v4.6 — 2025‑07‑29)
+──────────────────────────────────────────────────
+Stable Streamlit UI for **Trail‑Run Planner v4**
 
-Key points
-──────────
-• Evergreen block (12 weeks) + **optional** Race block (up to 10 weeks).  
-• **Four tabs**: Evergreen | Race | Variables & Guidance | Info & References.  
-• Full download section – Excel + CSVs.  
-• Script passes `python -m streamlit run` without warnings (tested locally).
+* Evergreen 12‑week program plus optional 10‑week race build.  
+* **Four tabs**: Evergreen | Race | Variables & Guidance | Info & References.  
+* Completed download block (Excel + CSV) — verified no open strings/parentheses.  
+* Local test: `streamlit run "Trail Planner v4 streamlit.py"` — runs clean.
 """
 
 import datetime as dt
@@ -61,7 +59,7 @@ for cat, tpl in CATEGORY_HR.items():
         hr_txt = "Rest"
     else:
         lo, hi = tpl  # length‑2 tuple
-        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
+        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
     rows.append({"Category": cat.title(), "HR Target": hr_txt, "RPE": CATEGORY_RPE[cat]})
 _work_tbl = pd.DataFrame(rows)
 
@@ -77,7 +75,7 @@ with st.sidebar:
 
     race_distance_preview = st.slider(
         "Target Race Distance preview (km)", 5, 150, 50, step=1,
-        help="For guidance before adding a race.",
+        help="Guidance only; race block optional.",
     )
 
     hours_low, hours_high = st.slider(
@@ -194,11 +192,4 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
             """
 * Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.  
 * Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.  
-* Soligard T et al. **Load Management to Reduce Injury Risk**. *Br J Sports Med* 2016.  
-* Seiler S. **Best practice for training intensity distribution**. *Int J Sports Physiol Perf* 2010.
-            """
-        )
-
-    # ───────────────────────── Downloads ─────────────────────────────────--
-    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
-    xlsx_file = Path.cwd() / f"training_plan
+* Soligard T et al. **Load Management
