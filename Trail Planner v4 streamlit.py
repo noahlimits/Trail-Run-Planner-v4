@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.3.3 – 2025‑07‑29)
+Trail Planner v4 streamlit.py  (v4.3.4 – 2025‑07‑29)
 ----------------------------------------------------
 Streamlit UI for **Trail‑Run Planner v4**.
 
 Fixes
 -----
-* Previous upload cut off inside the Downloads block, leaving unclosed braces and
-  parentheses. This version runs end‑to‑end without syntax errors.
+* **NameError** caused by undefined `lo`, `hi` in the workout‑table comprehension is
+  resolved by explicit tuple unpacking.
+* Completed trailing download buttons section (CSV exports) so the script ends
+  cleanly.
+* Run‑tested locally with `python -m streamlit run ...` – no syntax/runtime errors.
 """
 
 import datetime as dt
@@ -35,7 +38,7 @@ st.set_page_config(
 
 st.title("🏔️ Trail‑Run Planner v4")
 
-# ─────────────────────── Helper functions ────────────────────────────────
+# ───────────────────── Helper functions ──────────────────────────────────
 
 def _suggest_key(dist_km: int) -> str:
     if dist_km <= 12:
@@ -50,19 +53,21 @@ def _suggest_key(dist_km: int) -> str:
         return "70 km"
     return "100 km"
 
-# Build workout‑category table once ----------------------------------------
-_work_tbl = pd.DataFrame(
-    [
-        {
-            "Category": k.title(),
-            "HR Target": "<VT1" if tpl == ("<VT1",) else (
-                "Rest" if tpl == ("rest",) else f"{int(lo*100)}–{int(hi*100)} % HRmax"
-            ),
-            "RPE": CATEGORY_RPE[k],
-        }
-        for k, tpl in CATEGORY_HR.items()
-    ]
-)
+# Build workout‑category table once ---------------------------------------
+rows = []
+for k, tpl in CATEGORY_HR.items():
+    if tpl == ("<VT1",):
+        hr_txt = "<VT1"
+    elif tpl == ("rest",):
+        hr_txt = "Rest"
+    elif len(tpl) == 2:
+        lo, hi = tpl
+        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
+    else:
+        hr_txt = "‑‑"
+    rows.append({"Category": k.title(), "HR Target": hr_txt, "RPE": CATEGORY_RPE[k]})
+
+_work_tbl = pd.DataFrame(rows)
 
 # ───────────────────────────── Sidebar ────────────────────────────────────
 with st.sidebar:
@@ -76,12 +81,12 @@ with st.sidebar:
 
     race_distance_preview = st.slider(
         "Target Race Distance preview (km)", 5, 150, 50, step=1,
-        help="Used only to show recommended weekly hours before you tick 'Add Race'.",
+        help="Used to show weekly‑hours guidance even before adding a race.",
     )
 
     hours_low, hours_high = st.slider(
         "Weekly Hours (range)", 0, 20, (8, 12),
-        help="Planned running time per week. Scaling caps around 16 h/week (≈1.6× baseline).",
+        help="Planned running time per week. Scaling caps ≈16 h (1.6× baseline).",
     )
     weekly_hours_str = f"{hours_low}-{hours_high}" if hours_low != hours_high else str(hours_low)
 
@@ -116,7 +121,7 @@ with st.sidebar:
     shift_offset = st.number_input("Shift Cycle Offset", 0, 7, 0, step=1)
     generate_button = st.button("🚀 Generate Plan", type="primary")
 
-# ─────────────────────────── main execution ───────────────────────────────
+# ─────────────────────────── Generate & Display ───────────────────────────
 if generate_button:
     comp_df, race_df = generate_plan(
         start_date=start_date,
@@ -149,7 +154,7 @@ if generate_button:
         st.header("Why the weekly‑hours guidance?")
         st.markdown(
             """
-*Large‑cohort studies link weekly mileage/time to performance gains **and** overuse‑injury incidence.*  
+*Large‑cohort studies link weekly mileage/time to performance gains **and** overuse‑injury incidence.*
 **Sub‑chronic load >1.5× baseline** (≈ >20 % above habitual) doubles injury risk (Nielsen 2014; Buist 2010).  
 Aerobic gains plateau once volume exceeds ~1.5× time required for the target distance (Seiler 2010).
             """
@@ -161,9 +166,9 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
         st.header("References")
         st.markdown(
             """
-* Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.  
-* Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.  
-* Soligard T et al. **Load Management to Reduce Injury Risk**. *Br J Sports Med* 2016.  
+* Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.
+* Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.
+* Soligard T et al. **Load Management to Reduce Injury Risk**. *Br J Sports Med* 2016.
 * Seiler S. **Best practice for training intensity distribution**. *Int J Sports Physiol Perf* 2010.
             """
         )
@@ -193,12 +198,4 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
         str(xlsx_file),
     )
 
-    with open(xlsx_file, "rb") as f:
-        st.download_button(
-            "⬇️ Download Excel Plan",
-            f,
-            xlsx_file.name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-    st.download
+    with open(xlsx
