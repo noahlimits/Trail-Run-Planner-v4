@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.4.1 – 2025‑07‑29)
-----------------------------------------------------
-**FULL script – verified end‑to‑end**
-* 4 tabs (Evergreen, Race, Variables & Guidance, Info & References)
-* Downloads section completed – Excel + CSV buttons.
-* Tested locally: `python -m streamlit run "Trail Planner v4 streamlit.py"` – no errors.
+Trail Planner v4 streamlit.py  (v4.5 – 2025‑07‑29)
+--------------------------------------------------
+Finalised Streamlit UI for **Trail‑Run Planner v4**
+
+Key points
+──────────
+• Evergreen block (12 weeks) + **optional** Race block (up to 10 weeks).  
+• **Four tabs**: Evergreen | Race | Variables & Guidance | Info & References.  
+• Full download section – Excel + CSVs.  
+• Script passes `python -m streamlit run` without warnings (tested locally).
 """
 
 import datetime as dt
@@ -56,7 +60,7 @@ for cat, tpl in CATEGORY_HR.items():
     elif tpl == ("rest",):
         hr_txt = "Rest"
     else:
-        lo, hi = tpl  # always length‑2 tuple for other categories
+        lo, hi = tpl  # length‑2 tuple
         hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
     rows.append({"Category": cat.title(), "HR Target": hr_txt, "RPE": CATEGORY_RPE[cat]})
 _work_tbl = pd.DataFrame(rows)
@@ -73,27 +77,27 @@ with st.sidebar:
 
     race_distance_preview = st.slider(
         "Target Race Distance preview (km)", 5, 150, 50, step=1,
-        help="Shown only for guidance before adding a race.",
+        help="For guidance before adding a race.",
     )
 
     hours_low, hours_high = st.slider(
         "Weekly Hours (range)", 0, 20, (8, 12),
-        help="Planned running time per week (scales durations; cap ≈16 h).",
+        help="Planned running time per week. Scaling caps ≈16 h (1.6× baseline).",
     )
     weekly_hours_str = f"{hours_low}-{hours_high}" if hours_low != hours_high else str(hours_low)
 
-    key_guidance = _suggest_key(race_distance_preview)
-    rec_lo, rec_hi = map(int, DISTANCE_SUGGEST[key_guidance].replace("–", "-").split("-"))
+    # Weekly‑hours guidance --------------------------------------------------
+    g_key = _suggest_key(race_distance_preview)
+    rec_lo, rec_hi = map(int, DISTANCE_SUGGEST[g_key].replace("–", "-").split("-"))
     st.markdown(
-        f"<u>Recommended for **{key_guidance}**: {rec_lo}–{rec_hi} h/week</u>",
-        unsafe_allow_html=True,
+        f"<u>Recommended for **{g_key}**: {rec_lo}–{rec_hi} h/week</u>", unsafe_allow_html=True,
     )
-    avg_selected = (hours_low + hours_high) / 2
-    if avg_selected < rec_lo:
+    avg_sel = (hours_low + hours_high) / 2
+    if avg_sel < rec_lo:
         st.info("Below recommended – expect slower progression.")
-    elif avg_selected > rec_hi * 1.2:
+    elif avg_sel > rec_hi * 1.2:
         st.warning("›20 % above recommended – diminishing returns & injury risk.")
-    elif avg_selected > rec_hi:
+    elif avg_sel > rec_hi:
         st.info("Slightly above recommended – monitor fatigue.")
 
     include_base_block = st.checkbox("Include Base Block", True)
@@ -168,7 +172,7 @@ if generate_button:
         st.subheader("Recommended Hours by Distance")
         st.table(pd.DataFrame({
             "Distance": list(DISTANCE_SUGGEST.keys()),
-            "Weekly Hours": list(DISTANCE_SUGGEST.values())
+            "Weekly Hours": list(DISTANCE_SUGGEST.values()),
         }))
 
     # Info & References -----------------------------------------------------
@@ -189,4 +193,12 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
         st.markdown(
             """
 * Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.  
-* Nielsen RO et 
+* Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.  
+* Soligard T et al. **Load Management to Reduce Injury Risk**. *Br J Sports Med* 2016.  
+* Seiler S. **Best practice for training intensity distribution**. *Int J Sports Physiol Perf* 2010.
+            """
+        )
+
+    # ───────────────────────── Downloads ─────────────────────────────────--
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
+    xlsx_file = Path.cwd() / f"training_plan
