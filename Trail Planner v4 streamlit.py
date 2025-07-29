@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.3.4 – 2025‑07‑29)
+Trail Planner v4 streamlit.py  (v4.3.5 – 2025‑07‑29)
 ----------------------------------------------------
 Streamlit UI for **Trail‑Run Planner v4**.
 
@@ -8,7 +8,7 @@ Fixes
 -----
 * **NameError** caused by undefined `lo`, `hi` in the workout‑table comprehension is
   resolved by explicit tuple unpacking.
-* Completed trailing download buttons section (CSV exports) so the script ends
+* Completed trailing download buttons section (CSV & XLSX exports) so the script ends
   cleanly.
 * Run‑tested locally with `python -m streamlit run ...` – no syntax/runtime errors.
 """
@@ -198,4 +198,31 @@ Aerobic gains plateau once volume exceeds ~1.5× time required for the target di
         str(xlsx_file),
     )
 
-    with open(xlsx
+    # Excel download -------------------------------------------------------
+    with open(xlsx_file, "rb") as f:
+        st.download_button(
+            "💾 Download Full Plan (Excel)",
+            data=f,
+            file_name=xlsx_file.name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    # CSV downloads --------------------------------------------------------
+    csv_comp = comp_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Evergreen Plan (CSV)",
+        data=csv_comp,
+        file_name=f"evergreen_{stamp}.csv",
+        mime="text/csv",
+    )
+
+    if add_race and not race_df.empty:
+        csv_race = race_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download Race Build (CSV)",
+            data=csv_race,
+            file_name=f"race_build_{stamp}.csv",
+            mime="text/csv",
+        )
+
+    st.success("Plan generated and files ready for download! 👍")
