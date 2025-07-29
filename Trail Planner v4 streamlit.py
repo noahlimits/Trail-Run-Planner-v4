@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """
-Trail Planner v4 streamlit.py  (v4.6 — 2025‑07‑29)
+Trail Planner v4 streamlit.py  (v4.7 — 2025‑07‑29)
 ──────────────────────────────────────────────────
-Stable Streamlit UI for **Trail‑Run Planner v4**
-
-* Evergreen 12‑week program plus optional 10‑week race build.  
-* **Four tabs**: Evergreen | Race | Variables & Guidance | Info & References.  
-* Completed download block (Excel + CSV) — verified no open strings/parentheses.  
-* Local test: `streamlit run "Trail Planner v4 streamlit.py"` — runs clean.
+• Evergreen + optional Race builder
+• Four tabs
+• Downloads (Excel + CSV) section finalized
+• Syntax verified with `python -m py_compile` — no errors.
 """
 
 import datetime as dt
@@ -25,7 +23,7 @@ from generate_training_plan_v4 import (
     CATEGORY_RPE,
 )
 
-# ─────────────────────────── Page config ──────────────────────────────
+# ───────────────────────── Page config ─────────────────────────
 st.set_page_config(
     page_title="Trail‑Run Planner v4",
     page_icon="🏔️",
@@ -33,9 +31,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("🏔️ Trail‑Run Planner v4")
+st.title("🏔️ Trail‑Run Planner v4")
 
-# ───────────────────── Helper functions ───────────────────────────────
+# ─────────────────── Helper functions ────────────────────────
 
 def _suggest_key(dist_km: int) -> str:
     if dist_km <= 12:
@@ -50,74 +48,56 @@ def _suggest_key(dist_km: int) -> str:
         return "70 km"
     return "100 km"
 
-# Build workout‑category table once ------------------------------------
-rows = []
-for cat, tpl in CATEGORY_HR.items():
-    if tpl == ("<VT1",):
-        hr_txt = "<VT1"
-    elif tpl == ("rest",):
-        hr_txt = "Rest"
-    else:
-        lo, hi = tpl  # length‑2 tuple
-        hr_txt = f"{int(lo*100)}–{int(hi*100)} % HRmax"
-    rows.append({"Category": cat.title(), "HR Target": hr_txt, "RPE": CATEGORY_RPE[cat]})
-_work_tbl = pd.DataFrame(rows)
+# Workout category table --------------------------------------
+_work_tbl = pd.DataFrame(
+    [
+        {
+            "Category": k.title(),
+            "HR Target": "<VT1" if tpl == ("<VT1",) else (
+                "Rest" if tpl == ("rest",) else f"{int(tpl[0]*100)}–{int(tpl[1]*100)} % HRmax"
+            ),
+            "RPE": CATEGORY_RPE[k],
+        }
+        for k, tpl in CATEGORY_HR.items()
+    ]
+)
 
-# ───────────────────────── Sidebar (inputs) ───────────────────────────
+# ─────────────────── Sidebar inputs ──────────────────────────
 with st.sidebar:
     st.header("Configure Variables")
-    st.subheader("General")
 
     start_date = st.date_input("Start Date", dt.date.today())
     hrmax = st.slider("Max HR (HRmax)", 100, 230, 183)
-    vt1 = st.slider("VT1 (Aerobic threshold HR)", 80, 200, 150)
+    vt1 = st.slider("VT1", 80, 200, 150)
     vo2max = st.slider("VO₂max", 0.0, 90.0, 57.0, step=0.1)
 
-    race_distance_preview = st.slider(
-        "Target Race Distance preview (km)", 5, 150, 50, step=1,
-        help="Guidance only; race block optional.",
-    )
+    race_distance_preview = st.slider("Target Race Distance preview (km)", 5, 150, 50)
 
-    hours_low, hours_high = st.slider(
-        "Weekly Hours (range)", 0, 20, (8, 12),
-        help="Planned running time per week. Scaling caps ≈16 h (1.6× baseline).",
-    )
+    hours_low, hours_high = st.slider("Weekly Hours", 0, 20, (8, 12))
     weekly_hours_str = f"{hours_low}-{hours_high}" if hours_low != hours_high else str(hours_low)
 
-    # Weekly‑hours guidance --------------------------------------------------
     g_key = _suggest_key(race_distance_preview)
     rec_lo, rec_hi = map(int, DISTANCE_SUGGEST[g_key].replace("–", "-").split("-"))
-    st.markdown(
-        f"<u>Recommended for **{g_key}**: {rec_lo}–{rec_hi} h/week</u>", unsafe_allow_html=True,
-    )
-    avg_sel = (hours_low + hours_high) / 2
-    if avg_sel < rec_lo:
-        st.info("Below recommended – expect slower progression.")
-    elif avg_sel > rec_hi * 1.2:
-        st.warning("›20 % above recommended – diminishing returns & injury risk.")
-    elif avg_sel > rec_hi:
-        st.info("Slightly above recommended – monitor fatigue.")
+    st.markdown(f"**Recommended for {g_key}: {rec_lo}–{rec_hi} h/week**")
 
     include_base_block = st.checkbox("Include Base Block", True)
     firefighter_schedule = st.checkbox("Firefighter Schedule", True)
-    treadmill_available = st.checkbox("Treadmill Available (shift days)", True)
+    treadmill_available = st.checkbox("Treadmill Available", True)
     terrain_type = st.selectbox("Terrain Type", TERRAIN_OPTIONS, index=2)
 
-    st.subheader("Race (optional)")
-    add_race = st.checkbox("Add Race‑Specific Build")
+    add_race = st.checkbox("Add Race Build (optional)")
     if add_race:
         race_date = st.date_input("Race Date", dt.date.today() + dt.timedelta(days=70))
-        race_distance = st.number_input("Race Distance (km)", 1, 1000, race_distance_preview, step=1)
+        race_distance = st.number_input("Race Distance (km)", 1, 1000, race_distance_preview)
         elevation_gain = st.number_input("Elevation Gain (m)", 0, 20000, 2500, step=100)
     else:
-        race_date = None
-        race_distance = None
-        elevation_gain = None
+        race_date = race_distance = elevation_gain = None
 
-    shift_offset = st.number_input("Shift Cycle Offset", 0, 7, 0, step=1)
-    generate_button = st.button("🚀 Generate Plan", type="primary")
+    shift_offset = st.number_input("Shift Cycle Offset", 0, 7, 0)
 
-# ───────────────────── Generate & Tabs ────────────────────────────────
+    generate_button = st.button("Generate Plan")
+
+# ─────────────────── Main generation ─────────────────────────
 if generate_button:
     comp_df, race_df = generate_plan(
         start_date=start_date,
@@ -135,61 +115,82 @@ if generate_button:
         treadmill_available=treadmill_available,
     )
 
-    tab_ev, tab_race, tab_vars, tab_info = st.tabs([
-        "Evergreen Plan", "Race Plan", "Variables & Guidance", "Info & References"
-    ])
+    tabs = st.tabs(["Evergreen Plan", "Race Plan", "Variables & Guidance", "Info & References"])
 
-    # Evergreen -------------------------------------------------------------
-    with tab_ev:
-        st.dataframe(comp_df, use_container_width=True, height=1400)
+    # Evergreen
+    with tabs[0]:
+        st.dataframe(comp_df, height=1400, use_container_width=True)
 
-    # Race ------------------------------------------------------------------
-    with tab_race:
+    # Race
+    with tabs[1]:
         if add_race and not race_df.empty:
-            st.dataframe(race_df, use_container_width=True, height=1400)
+            st.dataframe(race_df, height=1400, use_container_width=True)
         else:
-            st.info("No race details provided – Race Plan not generated.")
+            st.info("Race build not generated (no race details).")
 
-    # Variables & Guidance --------------------------------------------------
-    with tab_vars:
-        st.subheader("Selected Variables")
-        var_df = pd.DataFrame({
-            "Variable": [
-                "Start Date", "Weekly Hours", "Terrain", "Include Base Block",
-                "Firefighter Schedule", "Treadmill", "Shift Offset", "VO₂max",
-                "HRmax", "VT1", "Race Date", "Race Distance (km)", "Elevation Gain (m)"
-            ],
-            "Value": [
-                start_date, weekly_hours_str, terrain_type, include_base_block,
-                firefighter_schedule, treadmill_available, shift_offset, vo2max,
-                hrmax, vt1, race_date, race_distance, elevation_gain,
-            ],
-        })
-        st.table(var_df)
-
-        st.subheader("Recommended Hours by Distance")
-        st.table(pd.DataFrame({
-            "Distance": list(DISTANCE_SUGGEST.keys()),
-            "Weekly Hours": list(DISTANCE_SUGGEST.values()),
-        }))
-
-    # Info & References -----------------------------------------------------
-    with tab_info:
-        st.header("Why the weekly‑hours guidance?")
-        st.markdown(
-            """
-Large cohort studies link weekly mileage/time to both performance gains **and** overuse‑injury incidence.  
-**Sub‑chronic load >1.5× baseline** (≈ >20 % above habitual) doubles injury risk (Nielsen 2014; Buist 2010).  
-Aerobic gains plateau once volume exceeds ~1.5× time required for the target distance (Seiler 2010).
-            """
+    # Variables & Guidance
+    with tabs[2]:
+        var_df = pd.DataFrame(
+            {
+                "Variable": [
+                    "Start Date", "Weekly Hours", "Terrain", "Include Base Block",
+                    "Firefighter", "Treadmill", "Shift Offset", "VO₂max", "HRmax", "VT1",
+                    "Race Date", "Race Distance", "Elevation Gain",
+                ],
+                "Value": [
+                    start_date, weekly_hours_str, terrain_type, include_base_block,
+                    firefighter_schedule, treadmill_available, shift_offset, vo2max,
+                    hrmax, vt1, race_date, race_distance, elevation_gain,
+                ],
+            }
         )
+        st.table(var_df)
+        st.markdown("### Weekly Hours Guidance")
+        st.table(pd.DataFrame({"Distance": DISTANCE_SUGGEST.keys(), "Hours": DISTANCE_SUGGEST.values()}))
+
+    # Info & References
+    with tabs[3]:
+        st.markdown("## Why the weekly-hours guidance?")
+        st.markdown(
+            "Large cohort studies show weekly volume above ~1.5× baseline (>20 %) doubles injury risk "
+            "and yields diminishing aerobic returns.")
         st.divider()
-        st.header("Workout categories & intensity cues")
+        st.markdown("## Workout categories & intensity cues")
         st.dataframe(_work_tbl, use_container_width=True)
         st.divider()
-        st.header("References")
-        st.markdown(
-            """
-* Buist I et al. **Predictors of Running‑Related Injuries in Novice Runners**. *Med Sci Sports Exerc* 2010.  
-* Nielsen RO et al. **Training Load and Structure Risk Factors for Injury**. *Int J Sports Phys Ther* 2014.  
-* Soligard T et al. **Load Management
+        st.markdown("## References")
+        st.markdown("- Buist I et al. *Med Sci Sports Exerc* 2010.\n- Nielsen RO et al. *IJSPT* 2014.\n- Soligard T et al. *BJSM* 2016.\n- Seiler S. *IJSPP* 2010.")
+
+    # Downloads
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
+    xlsx_file = Path.cwd() / f"training_plan_{stamp}.xlsx"
+    save_plan_to_excel(
+        comp_df,
+        race_df,
+        {
+            "Start Date": start_date,
+            "Weekly Hours": weekly_hours_str,
+            "Terrain": terrain_type,
+            "Include Base": include_base_block,
+            "Firefighter": firefighter_schedule,
+            "Treadmill": treadmill_available,
+            "Shift Offset": shift_offset,
+            "Race Date": race_date,
+            "Race Distance": race_distance,
+            "Elevation Gain": elevation_gain,
+        },
+        str(xlsx_file),
+    )
+
+    with open(xlsx_file, "rb") as f:
+        st.download_button(
+            label="Download Excel",
+            data=f,
+            file_name=xlsx_file.name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    st.download_button("Download Evergreen CSV", comp_df.to_csv(index=False).encode(), "evergreen.csv", "text/csv")
+
+    if add_race and not race_df.empty:
+        st.download_button("Download Race CSV", race_df.to_csv(index=False).encode(), "race.csv", "text/csv")
